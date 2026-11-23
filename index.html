@@ -159,7 +159,7 @@ ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
     D.historico.filter(function (r) { return r.semana === semana; }).forEach(function (r) {
       var o = m.get(r.ruta);
       if (!o) { o = { ruta: r.ruta, dias: 0, ventas: 0, comision: 0, base_viaticos: 0, pago: 0 }; m.set(r.ruta, o); }
-      o.dias += 1;
+      if ((r.contado || 0) > 0) o.dias += 1; // un día solo con venta al crédito no cuenta como día trabajado
       o.ventas += r.ventas_totales || 0;
       o.comision += r.comision || 0;
       o.base_viaticos += r.base_viaticos || 0;
