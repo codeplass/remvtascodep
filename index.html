@@ -1,0 +1,385 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Consulta</title>
+<style>
+:root { --bg:#faf9f5; --fg:#1f1e1d; --muted:#6b6963; --panel:#ffffff; --line:#e3e0d6; --ok:#2e7d32; --bad:#b3261e; --cr:#f5c518; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg:#1b1a18; --fg:#ece9e1; --muted:#a09d94; --panel:#262522; --line:#3a3935; --ok:#6fcf74; --bad:#ff8a80; }
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+.hp { max-width:900px; margin:0 auto; padding:20px 14px 48px; display:flex; flex-direction:column; gap:20px; }
+h1 { font-family:Georgia,"Times New Roman",serif; font-weight:400; font-size:28px; margin:0 0 4px; }
+h2 { font-size:16px; font-weight:600; margin:0 0 8px; }
+.lede { margin:0; color:var(--muted); }
+.panel { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; min-width:0; }
+.scroll { overflow-x:auto; }
+table { border-collapse:collapse; width:auto; font-variant-numeric:tabular-nums; }
+th { text-align:left; font-weight:600; font-size:12px; color:var(--muted); padding:6px 6px; border-bottom:1px solid var(--line); white-space:nowrap; }
+td { padding:6px 6px; border-bottom:1px solid var(--line); white-space:nowrap; }
+th.n, td.n { text-align:right; }
+td.strong { font-weight:600; }
+tfoot td { font-weight:600; border-top:2px solid var(--line); border-bottom:0; }
+th.pago, td.pago { background:color-mix(in srgb, var(--ok) 16%, transparent); }
+td.cr, li.cr { background:color-mix(in srgb, var(--cr) 38%, transparent); }
+.periodo { margin:0 0 8px; color:var(--muted); font-variant-numeric:tabular-nums; }
+.aprox { color:var(--bad); font-weight:600; margin-left:4px; }
+select { font:inherit; padding:4px 8px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:6px; }
+ul.notas { list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:4px; font-size:12.5px; color:var(--muted); font-variant-numeric:tabular-nums; }
+ul.notas:empty { display:none; }
+ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
+.rutas { display:grid; grid-template-columns:minmax(0,1fr); gap:20px; }
+.ruta + .ruta { border-top:1px solid var(--line); padding-top:20px; }
+.pie { margin:0; font-size:12.5px; color:var(--muted); }
+.chip { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:6px; background:color-mix(in srgb, var(--cr) 55%, transparent); }
+.actualizado { margin:0; font-size:12.5px; color:var(--muted); }
+/* Ingreso con PIN */
+.pin { max-width:420px; display:flex; flex-direction:column; gap:12px; }
+.pin-form { display:flex; gap:8px; }
+.pin-campo { flex:1; min-width:0; font:inherit; letter-spacing:.3em; padding:8px 12px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; }
+.pin-btn { flex:none; font:inherit; padding:8px 16px; cursor:pointer; color:var(--fg); background:transparent; border:1px solid var(--line); border-radius:8px; }
+.pin-btn:disabled { opacity:.6; cursor:wait; }
+.pin-error { margin:0; color:var(--bad); font-size:13px; }
+[hidden] { display:none !important; }
+/* Celular: tablas más compactas para que el pago líquido quede a la vista */
+@media (max-width: 480px) {
+  body { font-size:14px; }
+  .hp { padding:14px 8px 40px; }
+  .panel { padding:12px 10px; }
+  table { font-size:13px; }
+  th, td { padding:6px 3px; }
+  th { font-size:11px; }
+}
+@media (max-width: 400px) {
+  table { font-size:12px; }
+  th, td { padding:6px 2px; }
+}
+</style>
+</head>
+<body>
+<div class="hp">
+  <section class="panel pin" id="acceso" aria-label="Ingreso">
+    <h1>Consulta</h1>
+    <p class="lede">Escribe el PIN para entrar.</p>
+    <form class="pin-form" id="pin-form">
+      <input class="pin-campo" id="pin-campo" name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" aria-label="PIN">
+      <button type="submit" class="pin-btn" id="pin-btn">Entrar</button>
+    </form>
+    <p class="pin-error" id="pin-error" hidden></p>
+  </section>
+
+  <div id="contenido" hidden style="display:flex; flex-direction:column; gap:20px;">
+    <header>
+      <h1>Pago semanal de ventas</h1>
+      <p class="actualizado" id="actualizado"></p>
+    </header>
+
+    <section class="panel" id="tabla-semanal">
+      <h2>PAGO VENTAS</h2>
+      <div class="periodo" id="sel-semana">—</div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Ruta</th><th class="n">Días</th><th class="n">Ventas</th><th class="n pago">Pago líquido</th></tr></thead>
+          <tbody id="tbody-semanal"></tbody>
+          <tfoot id="tfoot-semanal"></tfoot>
+        </table>
+      </div>
+      <ul class="notas" id="notas-credito"></ul>
+    </section>
+
+    <section class="panel" id="ventas-dia-ruta">
+      <h2>VENTAS POR DÍA Y RUTA</h2>
+      <div class="periodo" id="periodo-matriz">—</div>
+      <div class="scroll">
+        <table>
+          <thead><tr><th>Ruta</th><th class="n">Lun</th><th class="n">Mar</th><th class="n">Mié</th><th class="n">Jue</th><th class="n">Vie</th><th class="n">Sáb</th><th class="n">Total</th></tr></thead>
+          <tbody id="tbody-matriz"></tbody>
+          <tfoot id="tfoot-matriz"></tfoot>
+        </table>
+      </div>
+      <ul class="notas" id="notas-matriz"></ul>
+    </section>
+
+    <section class="panel rutas">
+      <div class="ruta" id="detalle-ruta-101"></div>
+      <div class="ruta" id="detalle-ruta-202"></div>
+    </section>
+
+    <p class="pie">** Venta aproximada al siguiente rango (a Q75 o menos).</p>
+    <p class="pie"><i class="chip"></i>Marcado en amarillo: venta al crédito.</p>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var MESES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+  var DIAS_COL = ['lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
+  var CLAVE_DIA = [null, 'lun', 'mar', 'mie', 'jue', 'vie', 'sab'];
+  var RUTAS_DETALLE = ['Ruta 101', 'Ruta 202'];
+  var D = null;          // datos descifrados
+  var semanaSel = null;  // semana que se muestra
+
+  var $ = function (id) { return document.getElementById(id); };
+  var r2 = function (n) { return Math.round(n * 100) / 100; };
+  var num = function (n, d) { return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d }); };
+  var fmtQ = function (n) { return 'Q' + num(n, 2); };
+  var fmtQ0 = function (n) { return 'Q' + num(n, 0); };
+
+  function el(tag, texto, clase) {
+    var e = document.createElement(tag);
+    if (texto !== undefined && texto !== null) e.textContent = texto;
+    if (clase) e.className = clase;
+    return e;
+  }
+  function celda(tr, texto, clase, aprox) {
+    var td = el('td', texto, clase);
+    if (aprox) td.appendChild(el('span', '**', 'aprox'));
+    tr.appendChild(td);
+    return td;
+  }
+
+  // ---------- Cálculos ----------
+  function semanasDisponibles() {
+    var m = new Map();
+    D.historico.forEach(function (r) { m.set(r.semana, r.periodo); });
+    return Array.from(m.entries()).sort(function (a, b) { return b[0].localeCompare(a[0]); });
+  }
+
+  function semanalDe(semana) {
+    var m = new Map();
+    D.historico.filter(function (r) { return r.semana === semana; }).forEach(function (r) {
+      var o = m.get(r.ruta);
+      if (!o) { o = { ruta: r.ruta, dias: 0, ventas: 0, comision: 0, base_viaticos: 0, pago: 0 }; m.set(r.ruta, o); }
+      o.dias += 1;
+      o.ventas += r.ventas_totales || 0;
+      o.comision += r.comision || 0;
+      o.base_viaticos += r.base_viaticos || 0;
+      o.pago += r.pago_liquido || 0;
+    });
+    return Array.from(m.values()).sort(function (a, b) { return a.ruta.localeCompare(b.ruta); }).map(function (o) {
+      return { ruta: o.ruta, dias: o.dias, ventas: r2(o.ventas), comision: r2(o.comision), base_viaticos: r2(o.base_viaticos), pago: r2(o.pago) };
+    });
+  }
+
+  function matrizDe(semana) {
+    var m = new Map();
+    D.ventas_dia_ruta.filter(function (r) { return r.semana === semana; }).forEach(function (r) {
+      var o = m.get(r.ruta);
+      if (!o) { o = { ruta: r.ruta, lun: null, mar: null, mie: null, jue: null, vie: null, sab: null, total: 0, cr: [] }; m.set(r.ruta, o); }
+      var v = r.ventas_totales || 0;
+      var c = CLAVE_DIA[new Date(r.fecha + 'T12:00:00').getDay()];
+      if (c) {
+        o[c] = r2((o[c] || 0) + v);
+        if (r.credito > 0 && o.cr.indexOf(c) < 0) o.cr.push(c);
+      }
+      o.total = r2(o.total + v);
+    });
+    return Array.from(m.values()).sort(function (a, b) { return a.ruta.localeCompare(b.ruta); });
+  }
+
+  // ---------- Dibujo ----------
+  function dibujarSemana() {
+    var semanas = semanasDisponibles();
+    var cont = $('sel-semana');
+    cont.replaceChildren();
+    if (!semanas.length) { cont.textContent = '—'; return; }
+    if (semanas.length === 1) { cont.textContent = semanas[0][1]; return; }
+    var sel = document.createElement('select');
+    sel.setAttribute('aria-label', 'Semana');
+    semanas.forEach(function (s) { sel.appendChild(new Option(s[1], s[0])); });
+    sel.value = semanaSel;
+    sel.onchange = function () { semanaSel = sel.value; dibujarTodoMenosSelector(); };
+    cont.appendChild(sel);
+  }
+
+  function dibujarTablaSemanal() {
+    var filas = semanalDe(semanaSel);
+    var tb = $('tbody-semanal'), tf = $('tfoot-semanal');
+    tb.replaceChildren(); tf.replaceChildren();
+    filas.forEach(function (r) {
+      var tr = document.createElement('tr');
+      celda(tr, r.ruta);
+      celda(tr, String(r.dias), 'n');
+      celda(tr, fmtQ0(r.ventas), 'n');
+      celda(tr, fmtQ(r.pago), 'n strong pago');
+      tb.appendChild(tr);
+    });
+    if (!filas.length) return;
+    var ventas = r2(filas.reduce(function (s, r) { return s + r.ventas; }, 0));
+    var pago = r2(filas.reduce(function (s, r) { return s + r.pago; }, 0));
+    var tr = document.createElement('tr');
+    celda(tr, 'Total');
+    celda(tr, '', 'n');
+    celda(tr, fmtQ0(ventas), 'n');
+    celda(tr, fmtQ(pago), 'n strong pago');
+    tf.appendChild(tr);
+  }
+
+  function notasDirectas(ul, ruta) {
+    ul.replaceChildren();
+    D.ventas_directas.forEach(function (r) {
+      if (r.semana !== semanaSel) return;
+      if (ruta && r.ruta !== ruta) return;
+      var li = el('li', null, 'cr');
+      li.append((r.cliente || r.ruta) + ' — ' + r.dia + ': ', el('span', fmtQ(r.monto)), ', ' + r.detalle + '.');
+      ul.appendChild(li);
+    });
+  }
+
+  function dibujarMatriz() {
+    var filas = matrizDe(semanaSel);
+    var tb = $('tbody-matriz'), tf = $('tfoot-matriz');
+    tb.replaceChildren(); tf.replaceChildren();
+    var per = D.ventas_dia_ruta.find(function (r) { return r.semana === semanaSel; });
+    $('periodo-matriz').textContent = per ? per.periodo : '—';
+    filas.forEach(function (r) {
+      var tr = document.createElement('tr');
+      celda(tr, r.ruta);
+      DIAS_COL.forEach(function (c) {
+        celda(tr, r[c] === null ? '—' : fmtQ0(r[c]), r.cr.indexOf(c) >= 0 ? 'n cr' : 'n');
+      });
+      celda(tr, fmtQ0(r.total), 'n strong');
+      tb.appendChild(tr);
+    });
+    if (filas.length) {
+      var tr = document.createElement('tr');
+      celda(tr, 'Total');
+      DIAS_COL.forEach(function (c) {
+        var hay = filas.some(function (r) { return r[c] !== null; });
+        var suma = r2(filas.reduce(function (s, r) { return s + (r[c] || 0); }, 0));
+        celda(tr, hay ? fmtQ0(suma) : '—', 'n');
+      });
+      celda(tr, fmtQ0(r2(filas.reduce(function (s, r) { return s + r.total; }, 0))), 'n strong');
+      tf.appendChild(tr);
+    }
+    var ul = $('notas-matriz');
+    ul.replaceChildren();
+    D.ventas_credito_dia.forEach(function (r) {
+      if (r.semana !== semanaSel) return;
+      var li = el('li', null, 'cr');
+      var directa = r.directa === 1;
+      li.append((r.cliente || r.ruta) + ' — ' + r.dia + ': ', el('span', fmtQ(r.monto)),
+        directa ? ', venta directa' + (r.pagada === 1 ? '' : ' (descontar a vendedor)') + '.' : '.');
+      ul.appendChild(li);
+    });
+  }
+
+  function dibujarRuta(contenedor, ruta) {
+    contenedor.replaceChildren();
+    var semanal = semanalDe(semanaSel).find(function (r) { return r.ruta === ruta; });
+    contenedor.appendChild(el('h2', ruta.toUpperCase()));
+    var per = D.historico.find(function (r) { return r.semana === semanaSel; });
+    contenedor.appendChild(el('div', semanal && per ? per.periodo : '—', 'periodo'));
+
+    var scroll = el('div', null, 'scroll');
+    var tabla = document.createElement('table');
+    var thead = document.createElement('thead');
+    var trh = document.createElement('tr');
+    [['Fecha', ''], ['Ventas', 'n'], ['Comisión', 'n'], ['Base+viát.', 'n'], ['Pago líquido', 'n pago']].forEach(function (c) {
+      trh.appendChild(el('th', c[0], c[1]));
+    });
+    thead.appendChild(trh);
+    tabla.appendChild(thead);
+
+    var diasCredito = new Set(D.ventas_directas
+      .filter(function (x) { return x.semana === semanaSel && x.ruta === ruta; })
+      .map(function (x) { return String(x.dia).slice(0, 3).toLowerCase(); }));
+    var tb = document.createElement('tbody');
+    D.historico
+      .filter(function (r) { return r.semana === semanaSel && r.ruta === ruta; })
+      .sort(function (a, b) { return a.fecha.localeCompare(b.fecha); })
+      .forEach(function (r) {
+        var tr = document.createElement('tr');
+        var p = r.fecha.split('-');
+        celda(tr, r.dia + ' ' + Number(p[2]) + MESES[Number(p[1]) - 1]);
+        var conCredito = r.credito > 0 || diasCredito.has(String(r.dia).slice(0, 3).toLowerCase());
+        celda(tr, fmtQ0(r.ventas_totales), conCredito ? 'n cr' : 'n', r.aprox === 1);
+        celda(tr, fmtQ(r.comision), 'n');
+        celda(tr, fmtQ(r.base_viaticos), 'n');
+        celda(tr, fmtQ(r.pago_liquido), 'n strong pago');
+        tb.appendChild(tr);
+      });
+    tabla.appendChild(tb);
+    if (semanal) {
+      var tf = document.createElement('tfoot');
+      var trf = document.createElement('tr');
+      celda(trf, 'Total');
+      celda(trf, fmtQ0(semanal.ventas), 'n');
+      celda(trf, fmtQ(semanal.comision), 'n');
+      celda(trf, fmtQ(semanal.base_viaticos), 'n');
+      celda(trf, fmtQ(semanal.pago), 'n strong pago');
+      tf.appendChild(trf);
+      tabla.appendChild(tf);
+    }
+    scroll.appendChild(tabla);
+    contenedor.appendChild(scroll);
+    var ul = el('ul', null, 'notas');
+    notasDirectas(ul, ruta);
+    contenedor.appendChild(ul);
+  }
+
+  function dibujarTodoMenosSelector() {
+    dibujarTablaSemanal();
+    notasDirectas($('notas-credito'), null);
+    dibujarMatriz();
+    dibujarRuta($('detalle-ruta-101'), RUTAS_DETALLE[0]);
+    dibujarRuta($('detalle-ruta-202'), RUTAS_DETALLE[1]);
+  }
+
+  function dibujar() {
+    var semanas = semanasDisponibles();
+    semanaSel = semanas.length ? semanas[0][0] : null;
+    try {
+      $('actualizado').textContent = 'Datos actualizados el ' + new Date(D.actualizado).toLocaleString('es-GT', { timeZone: 'America/Guatemala', dateStyle: 'medium', timeStyle: 'short' });
+    } catch (e) { $('actualizado').textContent = ''; }
+    dibujarSemana();
+    dibujarTodoMenosSelector();
+  }
+
+  // ---------- Ingreso con PIN: el PIN descifra los datos ----------
+  var b64 = function (s) { return Uint8Array.from(atob(s), function (c) { return c.charCodeAt(0); }); };
+
+  async function descifrar(pin) {
+    var resp = await fetch('datos.enc', { cache: 'no-store' });
+    if (!resp.ok) throw { codigo: 'carga' };
+    var e = await resp.json();
+    var material = await crypto.subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveKey']);
+    var llave = await crypto.subtle.deriveKey({ name: 'PBKDF2', salt: b64(e.salt), iterations: e.it, hash: 'SHA-256' }, material, { name: 'AES-GCM', length: 256 }, false, ['decrypt']);
+    var claro = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64(e.iv) }, llave, b64(e.ct));
+    return JSON.parse(new TextDecoder().decode(claro));
+  }
+
+  var form = $('pin-form'), campo = $('pin-campo'), error = $('pin-error'), btn = $('pin-btn');
+  form.addEventListener('submit', async function (ev) {
+    ev.preventDefault();
+    error.hidden = true;
+    var pin = campo.value.trim();
+    if (!pin) return;
+    if (!window.crypto || !crypto.subtle) { error.textContent = 'Este navegador no puede comprobar el PIN.'; error.hidden = false; return; }
+    btn.disabled = true; btn.textContent = 'Verificando…';
+    try {
+      D = await descifrar(pin);
+    } catch (err) {
+      btn.disabled = false; btn.textContent = 'Entrar';
+      if (err && err.codigo === 'carga') error.textContent = 'No se pudieron cargar los datos. Intenta de nuevo.';
+      else { error.textContent = 'PIN incorrecto.'; campo.value = ''; campo.focus(); }
+      error.hidden = false;
+      return;
+    }
+    campo.value = '';
+    $('acceso').hidden = true;
+    $('contenido').hidden = false;
+    dibujar();
+    var id = '';
+    try { id = decodeURIComponent((location.hash || '').slice(1)); } catch (e2) { id = ''; }
+    if (id) setTimeout(function () { var x = document.getElementById(id); if (x) x.scrollIntoView(); }, 300);
+  });
+})();
+</script>
+</body>
+</html>
