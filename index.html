@@ -43,6 +43,7 @@ ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
 .pin-campo { flex:1; min-width:0; font:inherit; letter-spacing:.3em; padding:8px 12px; color:var(--fg); background:var(--bg); border:1px solid var(--line); border-radius:8px; }
 .pin-btn { flex:none; font:inherit; padding:8px 16px; cursor:pointer; color:var(--fg); background:transparent; border:1px solid var(--line); border-radius:8px; }
 .pin-btn:disabled { opacity:.6; cursor:wait; }
+.cab { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; }
 .pin-error { margin:0; color:var(--bad); font-size:13px; }
 [hidden] { display:none !important; }
 /* Celular: tablas más compactas para que el pago líquido quede a la vista */
@@ -73,9 +74,12 @@ ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
   </section>
 
   <div id="contenido" hidden style="display:flex; flex-direction:column; gap:20px;">
-    <header>
-      <h1>Pago semanal de ventas</h1>
-      <p class="actualizado" id="actualizado"></p>
+    <header class="cab">
+      <div>
+        <h1>Pago semanal de ventas</h1>
+        <p class="actualizado" id="actualizado"></p>
+      </div>
+      <button type="button" class="pin-btn" id="salir">Salir</button>
     </header>
 
     <section class="panel" id="tabla-semanal">
@@ -378,6 +382,22 @@ ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
     var id = '';
     try { id = decodeURIComponent((location.hash || '').slice(1)); } catch (e2) { id = ''; }
     if (id) setTimeout(function () { var x = document.getElementById(id); if (x) x.scrollIntoView(); }, 300);
+  });
+
+  // Salir: borra los datos de la pantalla y vuelve a pedir el PIN
+  $('salir').addEventListener('click', function () {
+    D = null; semanaSel = null;
+    ['sel-semana', 'tbody-semanal', 'tfoot-semanal', 'notas-credito', 'tbody-matriz', 'tfoot-matriz', 'notas-matriz', 'detalle-ruta-101', 'detalle-ruta-202']
+      .forEach(function (id) { $(id).replaceChildren(); });
+    $('actualizado').textContent = '';
+    $('contenido').hidden = true;
+    $('acceso').hidden = false;
+    error.hidden = true;
+    campo.value = '';
+    btn.disabled = false; btn.textContent = 'Entrar';
+    if (location.hash) history.replaceState(null, '', location.pathname + location.search);
+    window.scrollTo(0, 0);
+    campo.focus();
   });
 })();
 </script>
