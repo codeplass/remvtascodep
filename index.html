@@ -156,10 +156,11 @@ ul.notas li.cr { padding:2px 6px; border-radius:4px; color:var(--fg); }
 
   function semanalDe(semana) {
     var m = new Map();
+    var noTrabajados = new Set((D.dias_no_trabajados || []).map(function (x) { return x.fecha + '|' + x.ruta; }));
     D.historico.filter(function (r) { return r.semana === semana; }).forEach(function (r) {
       var o = m.get(r.ruta);
       if (!o) { o = { ruta: r.ruta, dias: 0, ventas: 0, comision: 0, base_viaticos: 0, pago: 0 }; m.set(r.ruta, o); }
-      if ((r.contado || 0) > 0) o.dias += 1; // un día solo con venta al crédito no cuenta como día trabajado
+      if (!noTrabajados.has(String(r.fecha) + '|' + r.ruta)) o.dias += 1; // excepciones: días en que el vendedor no salió a vender
       o.ventas += r.ventas_totales || 0;
       o.comision += r.comision || 0;
       o.base_viaticos += r.base_viaticos || 0;
